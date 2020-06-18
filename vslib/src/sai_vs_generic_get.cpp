@@ -107,7 +107,7 @@ sai_status_t internal_vs_generic_get(
 
             if (status != SAI_STATUS_SUCCESS)
             {
-                SWSS_LOG_ERROR("%s read only not implemented on %s",
+                SWSS_LOG_INFO("%s read only not implemented on %s",
                         meta->attridname,
                         serialized_object_id.c_str());
 
@@ -119,7 +119,7 @@ sai_status_t internal_vs_generic_get(
 
         if (ait == attrHash.end())
         {
-            SWSS_LOG_ERROR("%s not implemented on %s",
+            SWSS_LOG_INFO("%s not implemented on %s",
                     meta->attridname,
                     serialized_object_id.c_str());
 

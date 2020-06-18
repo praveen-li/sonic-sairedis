@@ -1824,20 +1824,12 @@ sai_status_t meta_port_remove_validation(
         return SAI_STATUS_SUCCESS;
     }
 
-    if (object_reference_count(port_id) != 0)
-    {
-        SWSS_LOG_ERROR("port %s reference count is not zero, can't remove",
-                sai_serialize_object_id(port_id).c_str());
-
-        return SAI_STATUS_FAILURE;
-    }
-
     if (!meta_is_object_in_default_state(port_id))
     {
         SWSS_LOG_ERROR("port %s is not in default state, can't remove",
                 sai_serialize_object_id(port_id).c_str());
 
-        return SAI_STATUS_FAILURE;
+        return SAI_STATUS_OBJECT_IN_USE;
     }
 
     for (auto oid: it->second)
@@ -1848,7 +1840,7 @@ sai_status_t meta_port_remove_validation(
                     sai_serialize_object_id(port_id).c_str(),
                     sai_serialize_object_id(oid).c_str());
 
-            return SAI_STATUS_FAILURE;
+            return SAI_STATUS_OBJECT_IN_USE;
         }
 
         if (!meta_is_object_in_default_state(oid))
@@ -1856,7 +1848,7 @@ sai_status_t meta_port_remove_validation(
             SWSS_LOG_ERROR("port related object %s is not in default state, can't remove",
                     sai_serialize_object_id(oid).c_str());
 
-            return SAI_STATUS_FAILURE;
+            return SAI_STATUS_OBJECT_IN_USE;
         }
     }
 
@@ -1943,7 +1935,7 @@ sai_status_t meta_generic_validation_remove(
 
         SWSS_LOG_ERROR("object 0x%" PRIx64 " reference count is %d, can't remove", oid, count);
 
-        return SAI_STATUS_INVALID_PARAMETER;
+        return SAI_STATUS_OBJECT_IN_USE;
     }
 
     if (meta_key.objecttype == SAI_OBJECT_TYPE_PORT)
@@ -6755,7 +6747,68 @@ sai_status_t meta_sai_flush_fdb_entries(
     // there are no mandatory attributes
     // there are no conditional attributes
 
-    return flush_fdb_entries(switch_id, attr_count, attr_list);
+    auto status = flush_fdb_entries(switch_id, attr_count, attr_list);
+
+    if (SAI_STATUS_SUCCESS == status)
+    {
+        // use same logic as notification, so create notification event
+
+        std::vector<int32_t> types;
+
+        auto *et = sai_metadata_get_attr_by_id(SAI_FDB_FLUSH_ATTR_ENTRY_TYPE, attr_count, attr_list);
+
+        if (et)
+        {
+            switch (et->value.s32)
+            {
+                case SAI_FDB_FLUSH_ENTRY_TYPE_DYNAMIC:
+                    types.push_back(SAI_FDB_ENTRY_TYPE_DYNAMIC);
+                    break;
+
+                case SAI_FDB_FLUSH_ENTRY_TYPE_STATIC:
+                    types.push_back(SAI_FDB_ENTRY_TYPE_STATIC);
+                    break;
+
+                default:
+                    types.push_back(SAI_FDB_ENTRY_TYPE_DYNAMIC);
+                    types.push_back(SAI_FDB_ENTRY_TYPE_STATIC);
+                    break;
+            }
+        }
+        else
+        {
+            // no type specified so we need to flush static and dynamic entries
+
+            types.push_back(SAI_FDB_ENTRY_TYPE_DYNAMIC);
+            types.push_back(SAI_FDB_ENTRY_TYPE_STATIC);
+        }
+
+        for (auto type: types)
+        {
+            sai_fdb_event_notification_data_t data = {};
+
+            auto *bv_id = sai_metadata_get_attr_by_id(SAI_FDB_FLUSH_ATTR_BV_ID, attr_count, attr_list);
+            auto *bp_id = sai_metadata_get_attr_by_id(SAI_FDB_FLUSH_ATTR_BRIDGE_PORT_ID, attr_count, attr_list);
+
+            sai_attribute_t list[2];
+
+            list[0].id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
+            list[0].value.oid = bp_id ? bp_id->value.oid : SAI_NULL_OBJECT_ID;
+
+            list[1].id = SAI_FDB_ENTRY_ATTR_TYPE;
+            list[1].value.s32 = type;
+
+            data.event_type = SAI_FDB_EVENT_FLUSHED;
+            data.fdb_entry.switch_id = switch_id;
+            data.fdb_entry.bv_id = (bv_id) ? bv_id->value.oid : SAI_NULL_OBJECT_ID;
+            data.attr_count = 2;
+            data.attr = list;
+
+            meta_sai_on_fdb_flush_event_consolidated(data);
+        }
+    }
+
+    return status;
 }
 
 // NAT

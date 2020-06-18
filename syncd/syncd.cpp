@@ -8,6 +8,7 @@
 
 #include "swss/warm_restart.h"
 #include "swss/table.h"
+#include "swss/redisapi.h"
 
 #include "TimerWatchdog.h"
 
@@ -90,6 +91,9 @@ volatile bool g_asicInitViewMode = false;
  * SAI switch global needed for RPC server and for remove_switch
  */
 sai_object_id_t gSwitchId;
+
+std::string fdbFlushSha;
+std::string fdbFlushLuaScriptName = "fdb_flush.lua";
 
 struct cmdOptions
 {
@@ -4158,6 +4162,9 @@ int syncd_main(int argc, char **argv)
     getResponse  = std::make_shared<swss::ProducerTable>(dbAsic.get(), "GETRESPONSE");
     notifications = std::make_shared<swss::NotificationProducer>(dbNtf.get(), "NOTIFICATIONS");
 
+    std::string fdbFlushLuaScript = swss::loadLuaScript(fdbFlushLuaScriptName);
+    fdbFlushSha = swss::loadRedisScript(dbAsic.get(), fdbFlushLuaScript);
+    
     g_veryFirstRun = isVeryFirstRun();
 
     /* ignore warm logic here if syncd starts in Mellanox fastfast boot mode */
