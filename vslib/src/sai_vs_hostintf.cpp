@@ -1663,8 +1663,6 @@ sai_status_t vs_remove_hostif_int(
 sai_status_t vs_remove_hostif(
         _In_ sai_object_id_t hostif_id)
 {
-    MUTEX();
-
     SWSS_LOG_ENTER();
 
     return meta_sai_remove_oid(
