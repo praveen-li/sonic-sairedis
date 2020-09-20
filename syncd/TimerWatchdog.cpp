@@ -86,7 +86,7 @@ void TimerWatchdog::threadFunction()
 
         if (span < 0 && start > m_lastCheckTimestamp)
         {
-            SWSS_LOG_NOTICE(" span < 0 = %ld at %ld", span, now);
+            SWSS_LOG_INFO(" span < 0 = %ld at %ld", span, now);
 
             // this means start > end, so new function is currently executing,
             // or that function hanged, so see how long that function is
@@ -96,7 +96,7 @@ void TimerWatchdog::threadFunction()
 
             span = now - start; // this must be always non negative
 
-            SWSS_LOG_NOTICE(" new span  = %ld", span);
+            SWSS_LOG_INFO(" new span  = %ld", span);
 
             if (span < 0)
                 SWSS_LOG_THROW("negative span 'now - start': %ld - %ld", now, start);
