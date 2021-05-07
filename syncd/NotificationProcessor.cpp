@@ -429,6 +429,8 @@ void NotificationProcessor::process_on_switch_shutdown_request(
 
     std::string s = sai_serialize_switch_shutdown_request(switch_vid);
 
+    SWSS_LOG_NOTICE("processing and sending switch_shutdown_request notification");
+
     sendNotification(SAI_SWITCH_NOTIFICATION_NAME_SWITCH_SHUTDOWN_REQUEST, s);
 }
 
