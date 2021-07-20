@@ -10,6 +10,8 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_LIBTOOL
 AC_HEADER_STDC
+AM_PATH_PYTHON
+AM_PATH_PYTHON3
 
 AM_CONDITIONAL(sonic_asic_platform_barefoot,   test x$CONFIGURED_PLATFORM = xbarefoot)
 AM_CONDITIONAL(sonic_asic_platform_mellanox,   test x$CONFIGURED_PLATFORM = xmellanox)
@@ -50,6 +52,7 @@ AC_ARG_ENABLE(syncd,
    no)  syncd=false ;;
    *) AC_MSG_ERROR(bad value ${enableval} for --enable-syncd) ;;
 esac],[syncd=true])
+AS_IF([test "x${ENABLESYNCD}" = "xno" ],[syncd=false],[])
 AM_CONDITIONAL(SYNCD, test x$syncd = xtrue)
 AM_COND_IF([SYNCD], [
         AM_COND_IF([SAIVS], [], [AC_CHECK_LIB([sai], [main], [AC_MSG_NOTICE(libsai found)], [AC_MSG_ERROR(libsai is required for syncd)])
@@ -75,6 +78,10 @@ AC_ARG_ENABLE(redis-test,
 	*) AC_MSG_ERROR(bad value ${enableval} for --enable-redis-test) ;;
 esac],[rtest=false])
 AM_CONDITIONAL(RTEST, test x$rtest = xtrue)
+
+AM_CONDITIONAL(ARCH64, test `getconf LONG_BIT` = "64")
+
+AC_PATH_PROGS(SWIG, [swig3.0 swig])
 
 CFLAGS_COMMON=""
 CFLAGS_COMMON+=" -ansi"
@@ -118,6 +125,7 @@ CFLAGS_COMMON+=" -Wvariadic-macros"
 CFLAGS_COMMON+=" -Wwrite-strings"
 CFLAGS_COMMON+=" -Wno-switch-default"
 CFLAGS_COMMON+=" -Wconversion"
+CFLAGS_COMMON+=" -Wno-psabi"
 
 SAVED_FLAGS="$CXXFLAGS"
 CXXFLAGS="-Wcast-align=strict"
@@ -125,6 +133,17 @@ AC_MSG_CHECKING([whether CXX supports -Wcast-align=strict])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
     [AC_MSG_RESULT([yes])]
     [AC_SUBST([CFLAGS_COMMON], ["${CFLAGS_COMMON} -Wcast-align=strict"])],
+    [AC_MSG_RESULT([no])])
+CXXFLAGS="$SAVED_FLAGS"
+
+AC_SUBST(NO_CAST_FUNCTION_TYPE)
+
+SAVED_FLAGS="$CXXFLAGS"
+CXXFLAGS="-Wno-cast-function-type"
+AC_MSG_CHECKING([whether CXX supports -Wno-cast-function-type])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])]
+    [AC_SUBST([NO_CAST_FUNCTION_TYPE], ["-Wno-cast-function-type"])],
     [AC_MSG_RESULT([no])])
 CXXFLAGS="$SAVED_FLAGS"
 
@@ -141,5 +160,9 @@ AC_OUTPUT(Makefile
           saidump/Makefile
           saisdkdump/Makefile
           saidiscovery/Makefile
+          saiasiccmp/Makefile
           tests/Makefile
+          pyext/Makefile
+          pyext/py2/Makefile
+          pyext/py3/Makefile
           python/setup.py)

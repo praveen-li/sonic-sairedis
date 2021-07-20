@@ -1,7 +1,7 @@
-SUBDIRS = meta lib vslib python
+SUBDIRS = meta lib vslib python pyext
 
 if SYNCD
-SUBDIRS += syncd saiplayer saidump saidiscovery saisdkdump tests
+SUBDIRS += syncd saiplayer saidump saidiscovery saisdkdump saiasiccmp tests
 endif
 
 ACLOCAL_AMFLAGS = -I m4
